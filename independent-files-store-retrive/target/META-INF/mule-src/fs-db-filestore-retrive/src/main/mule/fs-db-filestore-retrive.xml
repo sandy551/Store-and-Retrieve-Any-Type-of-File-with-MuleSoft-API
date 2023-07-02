@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="c04d4490-183f-469c-8c00-d91fade14263" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="e63e1582-2241-493b-b4de-dc5ffe3630a4" />
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="ed07be55-3767-4028-8a02-d27d9435b04a" >
+		<db:my-sql-connection host="sql12.freesqldatabase.com" port="3306" user="sql12629982" password="ymDMIDU2cY" database="sql12629982" />
+	</db:config>
+	<flow name="file-store" doc:id="a360dc49-f543-4e25-99f4-3e0a4d1b5cb5" >
+		<http:listener doc:name="Listener" doc:id="d866cc42-2291-44ab-bbd5-0411f05dea92" config-ref="HTTP_Listener_config" path="/postData" allowedMethods="POST"/>
+		<file:read doc:name="Read Employee Files" doc:id="edfbd1b1-6f5c-411c-864a-ecd430465c5d" config-ref="File_Config" path='#[attributes.queryParams.filePath default ""]' outputMimeType="*/*" lock="true"/>
+		<logger level="INFO" doc:name="Logger" doc:id="77c9362d-4be3-4c77-85d9-8219b1351a95" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="211c4da9-1744-4d4d-8423-e1ccce05c5ae" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+var myFile = read(payload, "application/octet-stream")
+output text/plain
+---
+toBase64(myFile as Binary)]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
+output application/json
+---
+(attributes.fileName splitBy ".")[-1]
+]]></ee:set-variable>
+				<ee:set-variable variableName="Filename" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.fileName]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="bbc46e2d-708d-4754-b6e2-a9f2c5cfd733" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into fileInfo(filename,filetype,content)
+values(:filename,:filetype,:content)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"content" : payload,
+	"filetype" : vars.fileType,
+	"filename" : vars.Filename
+}]]]></db:input-parameters>
+		</db:insert>
+		<logger level="INFO" doc:name="Logger" doc:id="63f1741e-7afa-4b6e-b9fa-67d52e02a129" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="08993e8e-a4eb-4f52-8a08-738a6ad01ca6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="file-retrive" doc:id="289dae18-4c4f-4950-9c85-0d572c2212cd" >
+		<http:listener doc:name="Listener" doc:id="0910b859-54fc-4c20-aeed-180316204502" config-ref="HTTP_Listener_config" path="/getData" allowedMethods="GET"/>
+		<db:select doc:name="Select" doc:id="5b175fbe-4fb0-45a0-9cbf-a94b834f6c6b" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from  fileInfo]]></db:sql>
+		</db:select>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="c1173e3b-5bbb-4564-a860-4b50546307e9" collection="#[payload]" maxConcurrency="6">
+			<file:write doc:name="Write" doc:id="96bca91c-6351-46d1-9f87-57139b5ff029" config-ref="File_Config" path='#["C:/Users/ksand/Documents/fileinfo/retrive" ++ "/" ++&#10;payload.filename]'>
+			<file:content><![CDATA[#[%dw 2.0
+import * from dw::core::Binaries
+output application/PDF with binary
+---
+fromBase64(payload.content as String) as Binary]]]></file:content>
+		</file:write>
+		</parallel-foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="357ee10b-96c3-48cb-9e3f-0a0d37a92918" message="#[payload..payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="3bb976ba-1a41-4c01-a170-6e3810628255" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload..payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
