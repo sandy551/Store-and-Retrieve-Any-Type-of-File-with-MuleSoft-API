@@ -1,3 +1,16 @@
+> [!TIP]
+> To stay updated on the latest news and insights on mule-related topics, follow us on:
+> [^1]:
+> [Subscribe for latest updates(✨🌟FREE✨🌟)](https://mule.org.in/m/create-account)
+> [^1]:
+> [Our website](https://mule.org.in/)
+> [^1]:
+> [Our WhatsApp channel](https://www.whatsapp.com/channel/0029VaIq2XrKbYMPKdl3YE3X)
+> [^1]:
+> [WhatsApp community](https://chat.whatsapp.com/F6cPb1xEsGdEJ7rrfEHN0H)
+> [^1]:
+> [Our LinkedIn page](https://www.linkedin.com/company/mule-trains/)
+
 # How to Store and Retrieve Any Type of File with MuleSoft API
 MuleSoft is a powerful platform that allows you to create, integrate, and manage APIs for various applications and services. One of the common challenges that developers face is how to store and retrieve any type of file, such as images, videos, documents, etc., without compromising the quality or integrity of the file.
 In this blog post, I will show you how I developed a MuleSoft API that can store and retrieve any type of file using MySql server DB. I will also demonstrate how to test the API using Postman.
